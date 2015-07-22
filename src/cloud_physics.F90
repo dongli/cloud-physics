@@ -89,9 +89,13 @@ contains
     !                            Public Interfaces
     ! --------------------------------------------------------------------------
 
-    subroutine cloud_physics_init(namelist_file_path)
+    subroutine cloud_physics_init(namelist_file_path, T, p, qv, qc)
 
         character(*), intent(in) :: namelist_file_path
+        real(8), intent(in) :: T  ! Ambient temperature [K].
+        real(8), intent(in) :: p  ! Ambient pressure [hPa].
+        real(8), intent(in) :: qv ! Ambient vapor mixing ratio [g g-1].
+        real(8), intent(in) :: qc ! Droplet mixing ratio [g g-1].
 
         integer i
 
@@ -104,7 +108,7 @@ contains
         allocate(f(num_bin))
 
         call set_initial_bins(num_bin, r)
-        call set_initial_droplet_spectrum(num_bin, r, f)
+        call set_initial_droplet_spectrum(num_bin, qc, Rho_water, r, f)
 
         do i = 1, num_bin-1
             dr(i) = r(i+1)-r(i)
@@ -114,11 +118,12 @@ contains
 
     end subroutine cloud_physics_init
 
-    subroutine cloud_physics_run(T, p, qv)
+    subroutine cloud_physics_run(T, p, qv, qc)
 
         real(8), intent(in) :: T  ! Ambient temperature [K].
         real(8), intent(in) :: p  ! Ambient pressure [hPa].
         real(8), intent(in) :: qv ! Ambient vapor mixing ratio [g g-1].
+        real(8), intent(in) :: qc ! Droplet mixing ratio [g g-1].
 
         real(8) es ! Ambient saturation vapor pressure [hPa].
         real(8) S  ! Ambient saturation ratio [1].
@@ -368,22 +373,24 @@ contains
 
     end subroutine set_initial_bins
 
-    subroutine set_initial_droplet_spectrum(num_bin, r, f)
+    subroutine set_initial_droplet_spectrum(num_bin, q, rho, r, f)
 
         integer, intent(in) :: num_bin
+        real(8), intent(in) :: q   ! Mixing ratio [g g-1]
+        real(8), intent(in) :: rho ! Droplet density [g cm-3]
         real(8), intent(in) :: r(num_bin)
         real(8), intent(out) :: f(num_bin)
 
-        real(8), parameter :: alpha = 2.0d0 ! Cloud shape parameter.
-        real(8), parameter :: N = 2.0d8/1.0d06 ! Cloud droplet number concentration [m-3].
-        real(8), parameter :: De = 0.001 ! Air density [kg m-3]. TODO: Check the units.
-        real(8), parameter :: qc = 1.6d-6 ! Cloud mixing ratio [g g-1].
+        real(8), parameter :: Nt = 200.0d0 ! Droplet number concentration [cm-3].
+        real(8), parameter :: alpha = 2.0d0 ! Shape parameter.
         real(8), parameter :: gamma1 = 1.999964d0
         real(8), parameter :: gamma2 = 119.9964d0
-        real(8), parameter :: lambda = (gamma2*N*PI/6.0d0/(gamma1*De*qc))**(1.0d0/3.0d0)
-        real(8), parameter :: N0 = N*lambda**(1+alpha)/gamma1
+        real(8) lambda
+        real(8) N0
         integer i
 
+        lambda = (gamma2*Nt*PI/6.0d0/(gamma1*1.0d-3*rho*q))**(1.0d0/3.0d0)
+        N0 = Nt*lambda**(1+alpha)/gamma1
         do i = 1, num_bin
             f(i) = N0*r(i)**3*exp(-lambda*r(i))*dlog(2.0d0)/2.0d0/3.0d0
             if (f(i) < 1.0d-30) f(i) = 0.0d0

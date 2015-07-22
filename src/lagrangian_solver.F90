@@ -82,15 +82,10 @@ contains
         do i = 1, num_bin
             r0 = bins(i)%r
             dr0 = bins(i)%dr
-            ! Update central droplet radius r.
-            ! Update bin interval dr.
-            call growth_rate(T, p, es, S, r0, v1, div); k1 = dr0*div
-            r1 = r0+v1*dt*0.5d0; dr1 = dr0+k1*dt*0.5d0
-            call growth_rate(T, p, es, S, r0, v2, div); k2 = dr1*div
-            r1 = r0+v2*dt*0.5d0; dr1 = dr0+k2*dt*0.5d0
-            call growth_rate(T, p, es, S, r0, v3, div); k3 = dr1*div
-            r1 = r0+v3*dt;       dr1 = dr0+k3*dt
-            call growth_rate(T, p, es, S, r0, v4, div); k4 = dr1*div
+            call growth_rate(T, p, es, S, r0, v1, div); k1 = dr0*div; r1 = r0+v1*dt*0.5d0; dr1 = dr0+k1*dt*0.5d0
+            call growth_rate(T, p, es, S, r1, v2, div); k2 = dr1*div; r1 = r0+v2*dt*0.5d0; dr1 = dr0+k2*dt*0.5d0
+            call growth_rate(T, p, es, S, r1, v3, div); k3 = dr1*div; r1 = r0+v3*dt;       dr1 = dr0+k3*dt
+            call growth_rate(T, p, es, S, r1, v4, div); k4 = dr1*div
             bins(i)%r = r0+(v1+2.0d0*v2+2.0d0*v3+v4)/6.0d0*dt
             bins(i)%dr = dr0+(k1+2.0d0*k2+2.0d0*k3+k4)/6.0d0*dt
             bins(i)%f = bins(i)%f*dr0/bins(i)%dr
