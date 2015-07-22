@@ -197,6 +197,9 @@ contains
                 __FILE__, __LINE__)
         case (saturation_vapor_pressure_formula_unknown)
             es = 6.107d0*exp(17.15d0*(T-T_freeze)/(T-38.33d0))
+        case default
+            call report_error("Invalid saturation_vapor_pressure_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_saturation_vapor_pressure
@@ -219,6 +222,9 @@ contains
         select case (vaporization_latent_heat_formula)
         case (vaporization_latent_heat_formula_unknown)
             Lv = 2.5d3-(T-T_freeze)*2.371d0
+        case default
+            call report_error("Invalid vaporization_latent_heat_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_vaporization_latent_heat
@@ -276,6 +282,9 @@ contains
             delta_v = 6.6d-6*1013.25d0/293.15*T/p ! TODO: Where does this come from?
             Tr = T ! TODO: Is this OK?
             Dv = Dv/(r/(r+delta_v)+Dv/(r*alpha_c)*(2.0d0*PI/Rv/Tr)**0.5d0)
+        case default
+            call report_error("Invalid vapor_molecular_diffusivity_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_vapor_molecular_diffusivity
@@ -288,6 +297,9 @@ contains
         select case (dry_air_thermal_conductivity_formula)
         case (dry_air_thermal_conductivity_formula_beard_pruppacher_1971)
             Ka = (5.69d0+0.017d0*(T-T_freeze))*1.0d-5*cal_to_J
+        case default
+            call report_error("Invalid dry_air_thermal_conductivity_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_dry_air_thermal_conductivity
@@ -300,6 +312,9 @@ contains
         select case (vapor_thermal_conductivity_formula)
         case (vapor_thermal_conductivity_formula_beard_pruppacher_1971)
             Kv = (3.78d0+0.020d0*T)*1.0d-5*cal_to_J
+        case default
+            call report_error("Invalid vapor_thermal_conductivity_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_vapor_thermal_conductivity
@@ -327,6 +342,9 @@ contains
         select case (moist_air_thermal_conductivity_formula)
         case (moist_air_thermal_conductivity_formula_mason_sexena)
             Km = Ka_*(1.0d0-(gamma1-gamma2*Kv_/Ka_)*xv)
+        case default
+            call report_error("Invalid moist_air_thermal_conductivity_formula!", &
+                __FILE__, __LINE__)
         end select
 
     end function calc_moist_air_thermal_conductivity
