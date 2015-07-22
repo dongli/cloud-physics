@@ -28,8 +28,8 @@ module cloud_physics
     real(8), parameter :: Rho_water = 1.0d0 ! Water density [g cm-3].
 
     ! "Constants" that is approximatively constant within an ordinary situation.
-    real(8), parameter :: cpv = 1870.0d3 ! Specific heat capacity of water vapor at constant pressure [J g-1 K-1].
-    real(8), parameter :: cvv = 1410.0d3 ! Specific heat capacity of water vapor at constant volume [J g-1 K-1].
+    real(8), parameter :: cpv = 1.870d0 ! Specific heat capacity of water vapor at constant pressure [J g-1 K-1].
+    real(8), parameter :: cvv = 1.410d0 ! Specific heat capacity of water vapor at constant volume [J g-1 K-1].
 
     real(8), parameter :: PI = atan(1.0d0)*4.0d0 ! Just pie.
 
