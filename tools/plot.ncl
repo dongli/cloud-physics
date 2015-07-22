@@ -48,6 +48,8 @@ begin
         ny = dimsizes(tmYLValues)
         res_text@txFontHeightF = fheight
         text = gsn_add_text(wks, plot, "~F8~D~F0~t = 0.01s", 2.0e-8*tmXTValues(nx-1), 0.85*tmYLValues(ny-1), res_text)
+        text = gsn_add_text(wks, plot, "~F0~#bin = "+dimsizes(f->r), 2.0e-8*tmXTValues(nx-1), 0.78*tmYLValues(ny-1), res_text)
+        text = gsn_add_text(wks, plot, "~F0~f~B~max~N~ = "+sprintf("%3.0f", max(f->f)), 2.0e-8*tmXTValues(nx-1), 0.71*tmYLValues(ny-1), res_text)
         draw(plot)
         frame(wks)
     end do
