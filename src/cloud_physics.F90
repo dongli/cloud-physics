@@ -151,6 +151,10 @@ contains
 
         ierr = nf90_create(file_path, nf90_clobber, ncid)
 
+        ierr = nf90_put_att(ncid, nf90_global, "time_step_size", time_step_size)
+
+        ierr = nf90_enddef(ncid)
+
         call advection_solver_output(ncid)
 
         ierr = nf90_close(ncid)
@@ -245,7 +249,7 @@ contains
         real(8), intent(out) :: div_drdt ! Condensation growth rate divergence [s-1].
 
         real(8) Lv ! Vaporization latent heat [J g-1].
-        real(8) K  ! Air thermal conductivity [W m-1 K-1].
+        real(8) K  ! Air thermal conductivity [J s-1 cm-1 K-1].
         real(8) Dv ! Vapor molecular diffusivity [cm2 s-1].
         real(8) Fk ! Heat conduction term.
         real(8) Fd ! Vapor diffusivity term.
@@ -254,7 +258,7 @@ contains
         K  = calc_dry_air_thermal_conductivity(T)
         Dv = calc_vapor_molecular_diffusivity(T, p, r)
         Fk = (Lv/(Rv*T)-1)*(Lv*Rho_water)/(K*T)
-        Fd = (Rho_water*Rv*T)/(Dv*es)
+        Fd = (Rho_water*Rv*T)/(Dv*es)*1.0d4
 
         drdt = (S-1.0d0)/(Fk+Fd)/r
         div_drdt = -drdt/r
@@ -284,7 +288,7 @@ contains
             p0 = 1013.25d0
             Dv = 0.211d0*(T/T_freeze)**1.94d0*p0/p
             alpha_c = 0.04d0 ! TODO: What is this?
-            delta_v = 6.6d-6*1013.25d0/293.15*T/p ! TODO: Where does this come from?
+            delta_v = 1.3*6.6d-6*1013.25d0/293.15*T/p ! TODO: Where does this come from?
             Tr = T ! TODO: Is this OK?
             Dv = Dv/(r/(r+delta_v)+Dv/(r*alpha_c)*(2.0d0*PI/Rv/Tr)**0.5d0)
         case default

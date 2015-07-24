@@ -4,6 +4,13 @@ module advection_solver
 
     implicit none
 
+    private
+
+    public advection_solver_init
+    public advection_solver_run
+    public advection_solver_final
+    public advection_solver_output
+
 contains
 
     ! --------------------------------------------------------------------------

@@ -48,7 +48,7 @@ begin
         nx = dimsizes(tmXTValues)
         ny = dimsizes(tmYLValues)
         res_text@txFontHeightF = fheight
-        text = gsn_add_text(wks, plot, "~F8~D~F25~t = 0.01s", 0.2*tmXTValues(nx-1), 0.85*tmYLValues(ny-1), res_text)
+        text = gsn_add_text(wks, plot, "~F8~D~F25~t = "+sprintf("%4.1f", f@time_step_size)+"s", 0.2*tmXTValues(nx-1), 0.85*tmYLValues(ny-1), res_text)
         text = gsn_add_text(wks, plot, "#bin = "+dimsizes(f->r), 0.2*tmXTValues(nx-1), 0.78*tmYLValues(ny-1), res_text)
         text = gsn_add_text(wks, plot, "f~B~max~N~ = "+sprintf("%3.0f", max(f->f)), 0.2*tmXTValues(nx-1), 0.71*tmYLValues(ny-1), res_text)
         draw(plot)
