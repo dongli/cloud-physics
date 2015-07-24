@@ -282,7 +282,7 @@ contains
             end if
 #endif
             p0 = 1013.25d0
-            Dv = 0.211d-4*(T/T_freeze)**1.94d0*p0/p
+            Dv = 0.211d0*(T/T_freeze)**1.94d0*p0/p
             alpha_c = 0.04d0 ! TODO: What is this?
             delta_v = 6.6d-6*1013.25d0/293.15*T/p ! TODO: Where does this come from?
             Tr = T ! TODO: Is this OK?
