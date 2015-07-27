@@ -9,6 +9,7 @@ include_directories (${NETCDF_INCLUDE_DIRS})
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
 add_library (cloud_physics
+    "${PROJECT_SOURCE_DIR}/src/constants.F90"
     "${PROJECT_SOURCE_DIR}/src/cloud_physics.F90"
     "${PROJECT_SOURCE_DIR}/src/advection_solver.F90"
     "${PROJECT_SOURCE_DIR}/src/lagrangian_solver.F90"

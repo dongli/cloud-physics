@@ -17,8 +17,8 @@ program main
 
     write(file_path, "('output.', I5.5, '.nc')") 0
     call cloud_physics_output(file_path)
-    do i = 1, 1000
-        call cloud_physics_run(T, p, qv, qc)
+    do i = 1, 3000
+        call cloud_physics_run(T, p, qv)
         write(file_path, "('output.', I5.5, '.nc')") i
         call cloud_physics_output(file_path)
     end do

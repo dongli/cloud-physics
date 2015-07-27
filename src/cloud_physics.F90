@@ -1,6 +1,7 @@
 module cloud_physics
 
     use ui
+    use constants
     use advection_solver
     use netcdf
 
@@ -12,29 +13,6 @@ module cloud_physics
     public cloud_physics_run
     public cloud_physics_final
     public cloud_physics_output
-
-    ! --------------------------------------------------------------------------
-    !                               Constants
-    ! --------------------------------------------------------------------------
-    real(8), parameter :: kb = 1.3806488d-23 ! Boltzmann's constant [J K-1].
-    real(8), parameter :: NA = 6.0221413d23 ! Avogadro's number [mol-1].
-    real(8), parameter :: Ma = 28.9644d0 ! Dry air molecular weight [g mol-1].
-    real(8), parameter :: Mw = 18.0160d0 ! Water molecular weight [g mol-1].
-    real(8), parameter :: Rg = kb*NA ! Universal gas constant [J K-1 mol-1]
-    real(8), parameter :: Rd = Rg/Ma ! Dry air constant [J g-1 K-1].
-    real(8), parameter :: Rv = Rg/Mw ! Water vapor constant [J g-1 K-1].
-    real(8), parameter :: T_freeze = 273.15d0 ! Freezing point temperature of water [K].
-    real(8), parameter :: T_triple = 273.16d0 ! Triple point temperature of water [K].
-    real(8), parameter :: Rho_water = 1.0d0 ! Water density [g cm-3].
-
-    ! "Constants" that is approximatively constant within an ordinary situation.
-    real(8), parameter :: cpv = 1.870d0 ! Specific heat capacity of water vapor at constant pressure [J g-1 K-1].
-    real(8), parameter :: cvv = 1.410d0 ! Specific heat capacity of water vapor at constant volume [J g-1 K-1].
-
-    real(8), parameter :: PI = atan(1.0d0)*4.0d0 ! Just pie.
-
-    ! Unit conversion constants.
-    real(8), parameter :: cal_to_J = 4.1868d0
 
     ! --------------------------------------------------------------------------
     !                          Enumerate constants
@@ -56,9 +34,9 @@ module cloud_physics
     ! --------------------------------------------------------------------------
     !                              Variables
     ! --------------------------------------------------------------------------
-    real(8), allocatable :: r(:)
-    real(8), allocatable :: dr(:)
-    real(8), allocatable :: f(:)
+    real(8), allocatable :: r(:)  ! Droplet radius [cm].
+    real(8), allocatable :: dr(:) ! Bin interval [cm].
+    real(8), allocatable :: f(:)  ! Droplet number concentration per unit volume [cm-4]
 
     ! --------------------------------------------------------------------------
     !                           Control Parameters
@@ -108,7 +86,7 @@ contains
         allocate(f(num_bin))
 
         call set_initial_bins(num_bin, r)
-        call set_initial_droplet_spectrum(num_bin, qc, Rho_water, r, f)
+        call set_initial_droplet_spectrum(num_bin, qc, rhow, r, f)
 
         do i = 1, num_bin-1
             dr(i) = r(i+1)-r(i)
@@ -118,12 +96,11 @@ contains
 
     end subroutine cloud_physics_init
 
-    subroutine cloud_physics_run(T, p, qv, qc)
+    subroutine cloud_physics_run(T, p, qv)
 
         real(8), intent(in) :: T  ! Ambient temperature [K].
         real(8), intent(in) :: p  ! Ambient pressure [hPa].
         real(8), intent(in) :: qv ! Ambient vapor mixing ratio [g g-1].
-        real(8), intent(in) :: qc ! Droplet mixing ratio [g g-1].
 
         real(8) es ! Ambient saturation vapor pressure [hPa].
         real(8) S  ! Ambient saturation ratio [1].
@@ -165,30 +142,44 @@ contains
     !                           Private Interfaces
     ! --------------------------------------------------------------------------
 
-    subroutine diagnose(T, p, qv, r)
+    ! ==========================================================================
+    !                        Main Physics Processes
+    ! ==========================================================================
 
-        real(8), intent(in) :: T  ! Temperature [K].
-        real(8), intent(in) :: p  ! Pressure [hPa].
-        real(8), intent(in) :: qv ! Vapor mixing ratio [1].
+    ! ##########################################################################
+    !                    Condensation/Evaporation Growth
+    ! ##########################################################################
+
+    subroutine calc_condensation_growth_rate(T, p, es, S, r, drdt, div_drdt)
+
+        real(8), intent(in) :: T  ! Ambient temperature [K].
+        real(8), intent(in) :: p  ! Ambient pressure [hPa].
+        real(8), intent(in) :: es ! Ambient saturation vapor pressure [hPa].
+        real(8), intent(in) :: S  ! Ambient saturation ratio [1].
         real(8), intent(in) :: r  ! Droplet radius [cm].
+        real(8), intent(out) :: drdt ! Condensation growth rate [cm s-1].
+        real(8), intent(out) :: div_drdt ! Condensation growth rate divergence [s-1].
 
-        real(8) es
-        real(8) qvs
-        real(8) S
+        real(8) Lv ! Vaporization latent heat [J g-1].
+        real(8) K  ! Air thermal conductivity [J s-1 cm-1 K-1].
+        real(8) Dv ! Vapor molecular diffusivity [cm2 s-1].
+        real(8) Fk ! Heat conduction term.
+        real(8) Fd ! Vapor diffusivity term.
 
-        es = calc_saturation_vapor_pressure(T)
-        qvs = calc_saturation_vapor_mixing_ratio(p, es)
-        S = qv/qvs
+        Lv = calc_vaporization_latent_heat(T)
+        K  = calc_dry_air_thermal_conductivity(T)
+        Dv = calc_vapor_molecular_diffusivity(T, p, r)
+        Fk = (Lv/(Rv*T)-1)*(Lv*rhow)/(K*T)
+        Fd = (rhow*Rv*T)/(Dv*es)/hPa_to_J_cm_3
 
-        print *, "es =", es
-        print *, "qv =", qv
-        print *, "S  =", S
-        print *, "Lv =", calc_vaporization_latent_heat(T)
-        print *, "Ka =", calc_dry_air_thermal_conductivity(T)
-        print *, "Kv =", calc_vapor_thermal_conductivity(T)
-        print *, "Dv =", calc_vapor_molecular_diffusivity(T, p, r)
+        drdt = (S-1.0d0)/(Fk+Fd)/r
+        div_drdt = -drdt/r
 
-    end subroutine diagnose
+    end subroutine calc_condensation_growth_rate
+
+    ! ==========================================================================
+    !                    Physics Quantity Calculations
+    ! ==========================================================================
 
     function calc_saturation_vapor_pressure(T) result(es)
 
@@ -237,33 +228,6 @@ contains
         end select
 
     end function calc_vaporization_latent_heat
-
-    subroutine calc_condensation_growth_rate(T, p, es, S, r, drdt, div_drdt)
-
-        real(8), intent(in) :: T  ! Ambient temperature [K].
-        real(8), intent(in) :: p  ! Ambient pressure [hPa].
-        real(8), intent(in) :: es ! Ambient saturation vapor pressure [hPa].
-        real(8), intent(in) :: S  ! Ambient saturation ratio [1].
-        real(8), intent(in) :: r  ! Droplet radius [cm].
-        real(8), intent(out) :: drdt ! Condensation growth rate [cm s-1].
-        real(8), intent(out) :: div_drdt ! Condensation growth rate divergence [s-1].
-
-        real(8) Lv ! Vaporization latent heat [J g-1].
-        real(8) K  ! Air thermal conductivity [J s-1 cm-1 K-1].
-        real(8) Dv ! Vapor molecular diffusivity [cm2 s-1].
-        real(8) Fk ! Heat conduction term.
-        real(8) Fd ! Vapor diffusivity term.
-
-        Lv = calc_vaporization_latent_heat(T)
-        K  = calc_dry_air_thermal_conductivity(T)
-        Dv = calc_vapor_molecular_diffusivity(T, p, r)
-        Fk = (Lv/(Rv*T)-1)*(Lv*Rho_water)/(K*T)
-        Fd = (Rho_water*Rv*T)/(Dv*es)*1.0d4
-
-        drdt = (S-1.0d0)/(Fk+Fd)/r
-        div_drdt = -drdt/r
-
-    end subroutine calc_condensation_growth_rate
 
     function calc_vapor_molecular_diffusivity(T, p, r) result(Dv)
 

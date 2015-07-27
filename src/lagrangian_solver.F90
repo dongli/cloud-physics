@@ -13,14 +13,14 @@ module lagrangian_solver
 
     integer, parameter :: max_num_bin = 1000
 
-    type bin
+    type bin_type
         real(8) r
         real(8) dr
         real(8) f
-    end type bin
+    end type bin_type
 
     integer num_bin
-    type(bin), allocatable :: bins(:)
+    type(bin_type), allocatable :: bins(:)
 
 contains
 
