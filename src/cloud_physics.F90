@@ -36,7 +36,7 @@ module cloud_physics
     ! --------------------------------------------------------------------------
     real(8), allocatable :: r(:)  ! Droplet radius [cm].
     real(8), allocatable :: dr(:) ! Bin interval [cm].
-    real(8), allocatable :: f(:)  ! Droplet number concentration per unit volume [cm-4]
+    real(8), allocatable :: n(:)  ! Droplet number concentration spectrum per unit volume [cm-4]
 
     ! --------------------------------------------------------------------------
     !                           Control Parameters
@@ -83,16 +83,16 @@ contains
 
         allocate(r(num_bin))
         allocate(dr(num_bin-1))
-        allocate(f(num_bin))
+        allocate(n(num_bin))
 
         call set_initial_bins(num_bin, r)
-        call set_initial_droplet_spectrum(num_bin, qc, rhow, r, f)
-
         do i = 1, num_bin-1
             dr(i) = r(i+1)-r(i)
         end do
 
-        call advection_solver_init(num_bin, r, dr, f)
+        call set_initial_droplet_spectrum(num_bin, qc, r, dr, n)
+
+        call advection_solver_init(num_bin, r, dr, n)
 
     end subroutine cloud_physics_init
 
@@ -106,7 +106,8 @@ contains
         real(8) S  ! Ambient saturation ratio [1].
 
         es = calc_saturation_vapor_pressure(T)
-        S = qv/calc_saturation_vapor_mixing_ratio(p, es)
+        ! S = qv/calc_saturation_vapor_mixing_ratio(p, es)
+        S = 1.001d0
 
         call advection_solver_run(T, p, qv, es, S, time_step_size, calc_condensation_growth_rate)
 
@@ -116,7 +117,7 @@ contains
 
         deallocate(r)
         deallocate(dr)
-        deallocate(f)
+        deallocate(n)
 
     end subroutine cloud_physics_final
 
@@ -181,6 +182,16 @@ contains
     !                    Physics Quantity Calculations
     ! ==========================================================================
 
+    function calc_dry_air_density(T, p) result(rho)
+
+        real(8), intent(in) :: T ! Temperature [K].
+        real(8), intent(in) :: p ! Pressure [hPa].
+        real(8) rho ! Dry air density [g cm-3]
+
+        rho = p/Rd/T*hPa_to_J_cm_3
+
+    end function calc_dry_air_density
+
     function calc_saturation_vapor_pressure(T) result(es)
 
         real(8), intent(in) :: T ! Temperature [K].
@@ -237,7 +248,7 @@ contains
         real(8) Dv ! Vapor molecular diffusivity [cm2 s-1]
 
         real(8) p0 ! Reference pressure [hPa].
-        real(8) alpha_c ! TODO: What is this?
+        real(8) alpha_c ! Condensation coefficient [].
         real(8) delta_v ! Water vapor jump length [cm].
         real(8) Tr ! Temperature at drop surface [K].
 
@@ -251,10 +262,10 @@ contains
 #endif
             p0 = 1013.25d0
             Dv = 0.211d0*(T/T_freeze)**1.94d0*p0/p
-            alpha_c = 0.04d0 ! TODO: What is this?
+            alpha_c = 0.04d0
             delta_v = 1.3*6.6d-6*1013.25d0/293.15*T/p ! TODO: Where does this come from?
             Tr = T ! TODO: Is this OK?
-            Dv = Dv/(r/(r+delta_v)+Dv/(r*alpha_c)*(2.0d0*PI/Rv/Tr)**0.5d0)
+            Dv = Dv/(r/(r+delta_v)+Dv/(r*alpha_c)*(2.0d0*PI/(Rv*J_to_erg)/Tr)**0.5d0)
         case default
             call report_error("Invalid vapor_molecular_diffusivity_formula!", &
                 __FILE__, __LINE__)
@@ -327,7 +338,7 @@ contains
         integer, intent(in) :: num_bin
         real(8), intent(out) :: r(num_bin) ! [cm]
 
-        real(8), parameter :: a = 2.0d0**0.5d0
+        real(8), parameter :: a = 2.0d0**(1/50.0d0)
         real(8), parameter :: b = 4.0d0/3.0d0*PI
         real(8) m(num_bin) ! Droplet mass per bin [g].
         integer i
@@ -341,27 +352,29 @@ contains
 
     end subroutine set_initial_bins
 
-    subroutine set_initial_droplet_spectrum(num_bin, q, rho, r, f)
+    subroutine set_initial_droplet_spectrum(num_bin, q, r, dr, n)
 
         integer, intent(in) :: num_bin
         real(8), intent(in) :: q   ! Mixing ratio [g g-1]
-        real(8), intent(in) :: rho ! Droplet density [g cm-3]
         real(8), intent(in) :: r(num_bin)
-        real(8), intent(out) :: f(num_bin)
+        real(8), intent(in) :: dr(num_bin)
+        real(8), intent(out) :: n(num_bin) ! [cm-3 cm-1]
 
         real(8), parameter :: Nt = 200.0d0 ! Droplet number concentration [cm-3].
-        real(8), parameter :: alpha = 2.0d0 ! Shape parameter.
-        real(8), parameter :: gamma1 = 1.999964d0
-        real(8), parameter :: gamma2 = 119.9964d0
+        real(8), parameter :: alpha = 1.0d0 ! Shape parameter.
+        real(8), parameter :: gamma1 = 0.999987467704521d0
+        real(8), parameter :: gamma2 = 23.9993127670914d0
         real(8) lambda
         real(8) N0
         integer i
+        real(8) :: NN = 0
 
-        lambda = (gamma2*Nt*PI/6.0d0/(gamma1*1.0d-3*rho*q))**(1.0d0/3.0d0)
+        lambda = (gamma2*Nt*PI*1000.0d0/6.0d0/(gamma1*q))**(1.0d0/3.0d0)
         N0 = Nt*lambda**(1+alpha)/gamma1
         do i = 1, num_bin
-            f(i) = N0*r(i)**3*exp(-lambda*r(i))*dlog(2.0d0)/2.0d0/3.0d0
-            if (f(i) < 1.0d-30) f(i) = 0.0d0
+            n(i) = N0*r(i)*exp(-lambda*r(i))
+            NN = NN+n(i)
+            if (n(i) < 1.0d-30) n(i) = 0.0d0
         end do
 
     end subroutine set_initial_droplet_spectrum

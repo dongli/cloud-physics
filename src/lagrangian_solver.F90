@@ -11,12 +11,12 @@ module lagrangian_solver
     public lagrangian_solver_final
     public lagrangian_solver_output
 
-    integer, parameter :: max_num_bin = 1000
+    integer, parameter :: max_num_bin = 2000
 
     type bin_type
         real(8) r
         real(8) dr
-        real(8) f
+        real(8) n
     end type bin_type
 
     integer num_bin
@@ -28,12 +28,12 @@ contains
     !                            Public Interfaces
     ! --------------------------------------------------------------------------
 
-    subroutine lagrangian_solver_init(num_bin_, r, dr, f)
+    subroutine lagrangian_solver_init(num_bin_, r, dr, n)
 
         integer, intent(in) :: num_bin_       ! Initial discretized bin number.
         real(8), intent(in) :: r(num_bin_)    ! Initial droplet radius at left side [cm].
         real(8), intent(in) :: dr(num_bin_-1) ! Initial bin interval [cm].
-        real(8), intent(in) :: f(num_bin_)    ! Initial drop-size distribution [per unit air mass?].
+        real(8), intent(in) :: n(num_bin_)    ! Initial drop-size distribution [per unit air mass?].
 
         integer i
 
@@ -41,10 +41,10 @@ contains
 
         num_bin = 0
         do i = 1, num_bin_-1
-            if (f(i) > 0) then
+            if (n(i) > 0) then
                 bins(i)%r = r(i)+dr(i)*0.5d0
                 bins(i)%dr = dr(i)
-                bins(i)%f = f(i)
+                bins(i)%n = n(i)
                 num_bin = num_bin+1
             end if
         end do
@@ -86,10 +86,10 @@ contains
             call growth_rate(T, p, es, S, r1, v2, div); k2 = dr1*div; r1 = r0+v2*dt*0.5d0; dr1 = dr0+k2*dt*0.5d0
             call growth_rate(T, p, es, S, r1, v3, div); k3 = dr1*div; r1 = r0+v3*dt;       dr1 = dr0+k3*dt
             call growth_rate(T, p, es, S, r1, v4, div); k4 = dr1*div
-            bins(i)%r = r0+(v1+2.0d0*v2+2.0d0*v3+v4)/6.0d0*dt
+            bins(i)%r  = r0 +(v1+2.0d0*v2+2.0d0*v3+v4)/6.0d0*dt
             bins(i)%dr = dr0+(k1+2.0d0*k2+2.0d0*k3+k4)/6.0d0*dt
-            bins(i)%f = bins(i)%f*dr0/bins(i)%dr
-            total_droplet_num = total_droplet_num+bins(i)%dr*bins(i)%f
+            bins(i)%n = bins(i)%n*dr0/bins(i)%dr
+            total_droplet_num = total_droplet_num+bins(i)%dr*bins(i)%n
         end do
         print "(F30.15)", total_droplet_num
 
@@ -120,7 +120,7 @@ contains
 
         ierr = nf90_def_var(ncid, "dr", nf90_double, [num_bin_dimid], dr_varid)
 
-        ierr = nf90_def_var(ncid, "f", nf90_double, [num_bin_dimid], f_varid)
+        ierr = nf90_def_var(ncid, "n", nf90_double, [num_bin_dimid], f_varid)
 
         ierr = nf90_enddef(ncid)
 
@@ -135,7 +135,7 @@ contains
         ierr = nf90_put_var(ncid, dr_varid, var)
 
         do i = 1, num_bin
-            var(i) = bins(i)%f
+            var(i) = bins(i)%n*1.0d-4
         end do
         ierr = nf90_put_var(ncid, f_varid, var)
 

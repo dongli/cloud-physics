@@ -2,8 +2,8 @@ module constants
 
     implicit none
 
-    real(8), parameter :: kb = 1.3806488d-23 ! Boltzmann's constant [J K-1].
-    real(8), parameter :: NA = 6.0221413d23 ! Avogadro's number [mol-1].
+    real(8), parameter :: kb = 1.3806488d-23  ! Boltzmann's constant [J K-1].
+    real(8), parameter :: NA = 6.022140857d23 ! Avogadro's number [mol-1].
     real(8), parameter :: Md = 28.9644d0 ! Dry air molecular weight [g mol-1].
     real(8), parameter :: Mw = 18.0160d0 ! Water molecular weight [g mol-1].
     real(8), parameter :: Rg = kb*NA ! Universal gas constant [J K-1 mol-1]
@@ -24,5 +24,6 @@ module constants
     ! Unit conversion constants.
     real(8), parameter :: cal_to_J = 4.1868d0   ! [cal] -> [J].
     real(8), parameter :: hPa_to_J_cm_3 = 1.0d-4 ! [hPa] -> [J cm-3].
+    real(8), parameter :: J_to_erg = 1.0d7 ! [J] -> [erg]
 
 end module constants

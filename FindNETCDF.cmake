@@ -88,6 +88,8 @@ endforeach ()
 
 if (NOT NETCDF_LACK_INTERFACE)
     set (NETCDF_ALL_FOUND TRUE)
+else ()
+    set (NETCDF_ALL_FOUND FALSE)
 endif ()
 
 execute_process (COMMAND nc-config --has-pnetcdf OUTPUT_VARIABLE output)

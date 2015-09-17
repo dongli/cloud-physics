@@ -17,14 +17,14 @@ contains
     !                            Public Interfaces
     ! --------------------------------------------------------------------------
 
-    subroutine advection_solver_init(num_bin, r, dr, f)
+    subroutine advection_solver_init(num_bin, r, dr, n)
 
         integer, intent(in) :: num_bin ! Initial discretized bin number.
         real(8), intent(in) :: r(num_bin) ! Initial droplet radius left side [cm].
         real(8), intent(in) :: dr(num_bin) ! Initial bin interval [cm].
-        real(8), intent(in) :: f(num_bin) ! Initial drop-size distribution [per unit air mass?].
+        real(8), intent(in) :: n(num_bin) ! Initial drop-size distribution [per unit air mass?].
 
-        call lagrangian_solver_init(num_bin, r, dr, f)
+        call lagrangian_solver_init(num_bin, r, dr, n)
 
     end subroutine advection_solver_init
 
